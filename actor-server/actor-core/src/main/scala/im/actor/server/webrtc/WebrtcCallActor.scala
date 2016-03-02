@@ -99,9 +99,7 @@ private trait Members {
 
   def setMemberJoined(userId: UserId, isJoined: Boolean = true): Unit =
     members get userId match {
-      case Some(member) if isJoined != member.isJoined ⇒ members += userId → member.copy(isJoined = isJoined)
-      case Some(_) ⇒
-        throw new RuntimeException(s"Attempt to set member joined to $isJoined who is already $isJoined")
+      case Some(member) => members += userId → member.copy(isJoined = isJoined)
       case None ⇒
         throw new RuntimeException("Attempt to set an unexistent member joined")
     }
@@ -393,8 +391,6 @@ private final class WebrtcCallActor extends StashingActor with ActorLogging with
             broadcastSyncedSet()
           }
         }
-
-        log.debug("members {}", getMembers)
 
         if ( // no one have been reached and caller left
         (!isConversationStarted && client.externalUserId.contains(callerUserId)) ||
