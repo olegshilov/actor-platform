@@ -102,6 +102,8 @@ final class CryptoHelper(protoKeys: ActorProtoKey) {
       case Attempt.Successful(DecodeResult(EncryptionCBCPackage(iv, encSecret), remainder)) ⇒
         if (remainder.isEmpty) {
           log.debug(s"===decoded cbc, bitVector: ${encSecret} hex: ${encSecret.toHex}")
+          log.debug("===toByteArray length: {}", encSecret.toByteArray.length)
+          log.debug("===iv {} {}", iv, iv.length)
           Try(BitVector(cbcHmac.decryptPackage(ByteStrings.longToBytes(seq), iv.toByteArray, encSecret.toByteArray)))
         } else {
           log.error(s"Failed to decrypt package 1")
