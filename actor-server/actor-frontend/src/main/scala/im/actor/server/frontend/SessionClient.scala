@@ -23,6 +23,7 @@ import im.actor.server.mtproto.{ transport ⇒ T }
 import im.actor.server.persist.{ AuthIdRepo, MasterKeyRepo }
 import im.actor.server.session.{ HandleMessageBox, SessionEnvelope, SessionRegion }
 import im.actor.util.ThreadLocalSecureRandom
+import org.slf4j.LoggerFactory
 import scodec.{ DecodeResult, Attempt }
 import scodec.bits.BitVector
 import slick.dbio.DBIO
@@ -48,6 +49,7 @@ private[frontend] object SessionClient {
 
 final class CryptoHelper(protoKeys: ActorProtoKey) {
   private def random = ThreadLocalSecureRandom.current()
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   private object CbcHmac {
     object Server {
@@ -80,9 +82,12 @@ final class CryptoHelper(protoKeys: ActorProtoKey) {
   }
 
   def decrypt(seq: Long, cbcPackageBits: BitVector): Try[BitVector] = {
+    log.debug(s"===seq: ${seq}; cbcPackageBits: ${cbcPackageBits}")
     for {
       usa ← decryptUSA(seq, cbcPackageBits)
+      _ = log.debug(s"===usa: ${usa}")
       secret ← decryptRussia(seq, usa)
+      _ = log.debug(s"===secret: ${secret}")
     } yield secret
   }
 
@@ -97,9 +102,13 @@ final class CryptoHelper(protoKeys: ActorProtoKey) {
       case Attempt.Successful(DecodeResult(EncryptionCBCPackage(iv, encSecret), remainder)) ⇒
         if (remainder.isEmpty)
           Try(BitVector(cbcHmac.decryptPackage(ByteStrings.longToBytes(seq), iv.toByteArray, encSecret.toByteArray)))
-        else
+        else {
+          log.error(s"Failed to decrypt package 1")
           Failure(EncryptedPackageDecodeError)
-      case Attempt.Failure(e) ⇒ Failure(EncryptedPackageDecodeError)
+        }
+      case Attempt.Failure(e) ⇒
+        log.error(s"Failed to decrypt package 2: ${e}")
+        Failure(EncryptedPackageDecodeError)
     }
   }
 
