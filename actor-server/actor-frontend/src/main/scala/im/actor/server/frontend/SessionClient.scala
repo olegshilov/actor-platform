@@ -82,12 +82,11 @@ final class CryptoHelper(protoKeys: ActorProtoKey) {
   }
 
   def decrypt(seq: Long, cbcPackageBits: BitVector): Try[BitVector] = {
-    log.debug(s"===seq: ${seq}; cbcPackageBits: ${cbcPackageBits}")
     for {
       usa ← decryptUSA(seq, cbcPackageBits)
-      _ = log.debug(s"===usa: ${usa}")
+      _ = log.debug(s"===usa: {}", usa.toHex)
       secret ← decryptRussia(seq, usa)
-      _ = log.debug(s"===secret: ${secret}")
+      _ = log.debug(s"===secret: {}", secret.toHex)
     } yield secret
   }
 
@@ -98,10 +97,11 @@ final class CryptoHelper(protoKeys: ActorProtoKey) {
     decrypt(seq, cbcPackageBits, CbcHmac.Client.Russia)
 
   private def decrypt(seq: Long, cbcPackageBits: BitVector, cbcHmac: CBCHmacBox): Try[BitVector] = {
+    log.debug("=====input cbcPackageBits: {}", cbcPackageBits.toHex)
     EncryptionCBCPackageCodec.decode(cbcPackageBits) match {
       case Attempt.Successful(DecodeResult(EncryptionCBCPackage(iv, encSecret), remainder)) ⇒
         if (remainder.isEmpty) {
-          log.debug("===decoded cbc: {}", encSecret)
+          log.debug(s"===decoded cbc, bitVector: ${encSecret} hex: ${encSecret.toHex}")
           Try(BitVector(cbcHmac.decryptPackage(ByteStrings.longToBytes(seq), iv.toByteArray, encSecret.toByteArray)))
         } else {
           log.error(s"Failed to decrypt package 1")
